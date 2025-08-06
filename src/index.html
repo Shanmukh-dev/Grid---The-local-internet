@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'"
+    />
+    <meta
+      http-equiv="X-Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'"
+    />
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <title>Grid</title>
+  </head>
+  <body class="center home-body">
+    <div class="start-container">
+      <img src="./assets/logo.png" alt="" width="256" height="256">
+      <h2 id="serverStat">Server has not started</h2>
+      <div class="server-control">
+
+        <button class="btn-primary" id="start-btn">Start Grid</button>
+        <button class="btn-disabled" id="stop-btn" disabled>Stop Grid</button>
+      </div>
+      <button class="btn-secondary" id="open-client">Join a grid</button>
+
+    </div>
+  </body>
+  <script src="renderer.js"></script>
+
+</html>

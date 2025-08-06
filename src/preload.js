@@ -1,0 +1,18 @@
+const {contextBridge, ipcRenderer} = require("electron")
+
+
+
+contextBridge.exposeInMainWorld("socketServer", {
+    startServer: () => {ipcRenderer.send('start-server')},
+    stopServer: () => {ipcRenderer.send('stop-server')},
+    onStartServer: (cb) => ipcRenderer.on("on-start-server", (_, host, port)=>cb(host, port)),
+    onStopServer: (cb) => ipcRenderer.on("on-stop-server", ()=>cb()),
+    openClient: () => ipcRenderer.send("open-client")
+})
+
+contextBridge.exposeInMainWorld("socketClient", {
+    connect: (url) => ipcRenderer.invoke("connect-socket", url),
+    onConnect: (callback) => ipcRenderer.on("socket-connected", (_, id)=>callback(id)),
+    sendMessage:(message) => ipcRenderer.invoke("send-socket-message", message),
+    onMessage: (callback) => ipcRenderer.on("socket-message", (_, msg) => callback(msg))
+})

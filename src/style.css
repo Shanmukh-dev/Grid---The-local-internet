@@ -1,0 +1,251 @@
+:root{
+
+    --bg-dark: hsla(0, 0%, 5%, 1);
+    --bg: hsla(0, 0%, 10%, 1);
+    --bg-light: hsla(0, 0%, 14%, 1);
+    --accent: hsla(279, 63%, 53%, 1);
+    --error: hsla(349, 70%, 67%, 1);
+    --text: hsla(0, 0%, 94%, 1);
+    --text-muted: hsla(0, 0%, 70%, 1);
+    --pady: 10px;
+    --padx: 30px
+}
+
+*{
+    padding: 0;
+    margin: 0;
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+body{
+    background-color: var(--bg-dark);
+    height: 100vh;
+    width: 100%
+}
+
+button{
+    all: unset;
+    font-family: Arial, Helvetica, sans-serif;
+    text-align: center;
+}
+
+input{
+    all: unset;
+    font-family: Arial, Helvetica, sans-serif;
+}
+textarea{
+    all: unset;
+    font-family: Arial, Helvetica, sans-serif;
+}
+
+.home-body{
+    background-image: url("./assets/background.png");
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+}
+
+.center{
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.btn-primary{
+    background-color: var(--accent);
+    padding: var(--pady) 30px;
+    border-radius: 10px;
+    transition: background-color 0.2s ease-out;
+}
+
+.btn-primary:hover{
+    background-color: hsl(from var(--accent) h s calc(l - 10));
+}
+.btn-secondary{
+    background-color: var(--bg-light);
+    padding: var(--pady) 30px;
+    border-radius: 10px;
+    transition: background-color 0.2s ease-out;
+}
+
+.btn-secondary:hover{
+    background-color: var(--accent);
+}
+
+.btn-download{
+    background-color: var(--accent);
+    padding: 10px;
+    width: 24px;
+    height: 24px;
+    transition: all 0.2s ease-out;
+    border-radius: 100%;
+}
+
+.btn-download:hover{
+    background-color: hsl(from var(--accent) h s calc(l + 10));
+}
+
+.btn-disabled{
+    background-color: var(--bg);
+    border: 5px solid var(--bg-light);
+    opacity: 50%;
+    padding: var(--pady) 30px;
+    border-radius: 10px;
+    text-decoration: line-through;
+
+}
+
+
+
+.input{
+    border: 2.5px solid var(--bg-light);
+    padding: var(--pady) 10px;
+    border-radius: 10px;
+    transition: all 0.3s ease-in-out;
+}
+.input:focus{
+    border: 2.5px solid var(--accent);
+    padding: var(--pady) 10px;
+}
+
+.start-container{
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background-color: hsla(0, 0%, 90%, 0.03);
+    backdrop-filter: blur(25px);
+    border: 1px solid hsl(from var(--text-muted) h s calc(l - 10));
+    width: 40%;
+    padding: 40px 35px;
+    border-radius: 10px;
+}
+
+.server-control{
+    background-color: transparent;
+    gap: 5.5px;
+    display: flex;
+    justify-content: center;
+}
+
+.start-container img{
+    align-self: center;
+    border-radius: 20px;
+}
+
+.ribbon{
+    display: flex;
+    justify-content: end;
+    background-color: var(--bg);
+    padding: 10px;
+    gap: 8px;
+}
+
+.chat-box{
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-bottom: 200px;
+
+}
+
+.msg{
+    background-color: var(--accent);
+    display: flex;
+    flex-direction: column;
+    margin: 10px;
+    overflow: hidden;
+    border-radius: 10px 10px 10px 10px;
+    max-width: 70%;
+    min-width: 75px;
+    gap: 0;
+
+}
+
+.msg-center{
+    background-color: var(--bg-light);
+    width: 30%;
+    text-align: center;
+    align-self: center;
+}
+
+.msg-right{
+    border-radius: 10px 10px 0px 10px;
+    align-self: end;
+    
+}
+
+.msg-left{
+    border-radius: 10px 10px 10px 0px;
+    align-self: start;
+    
+}
+
+.info{
+    padding: 5px;
+}
+
+.sender-name{
+    background-color: hsl(from var(--accent) h s calc(l - 10));
+    width: 100%;
+    padding: 2px 4px;
+    font-weight: bold;
+}
+
+.msg-content{
+    background-color: transparent;
+    padding: 5px;
+
+}
+
+.chat-input{
+    position: fixed;
+    display: flex;
+    width: 80%;
+    left: 50%;
+    transform: translateX(-50%);
+    align-items: center;
+    gap: 10px;
+    background-color: var(--bg);
+    padding: 10px;
+    border-radius: 20px 20px 0px 0px;
+    bottom: 0;
+}
+
+#mesgInp{
+    flex: 1;
+    resize: none;
+    background-color: var(--bg-dark);
+    border: 2.3px solid var(--accent);
+    border-radius: 100px 100px;
+}
+
+
+#mesgInp:focus{
+    border: 2.3px solid var(--accent);
+    
+}
+
+#sendBtn{
+    flex: 0;
+    padding: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 100%;
+}
+#fileInp{
+    display: none;
+}
+#fileBtn{
+    padding: 10px;
+    width: 24px;
+    height: 24px;
+    border-radius: 100%;
+}
+
+#serverStat{
+    color: var(--text-muted);
+    text-align: center;
+    font-weight: normal;
+    background-color: transparent;
+}

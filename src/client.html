@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grid Client</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    
+    <div class="ribbon">
+        <input type="text" id="uname" class="input" placeholder="Enter your name...">
+        <input type="text" id="hostInp" class="input" placeholder="Enter host">
+        <button class="btn-primary" id="joinBtn">Join</button>
+    </div>
+    <div class="chat-box" id="chatBox">
+        <!-- Do not delete the comment below 👇 -->
+
+        <!-- <div class="msg msg-right">
+            <span class="sender-name">TSSV</span>
+            <div class="msg-content">
+                Tst.txt
+                <button class="btn btn-download" onclick="download()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M12 15.248q-.161 0-.298-.053t-.267-.184l-2.62-2.619q-.146-.146-.152-.344t.152-.363q.166-.166.357-.169q.192-.003.357.163L11.5 13.65V5.5q0-.213.143-.357T12 5t.357.143t.143.357v8.15l1.971-1.971q.146-.146.347-.153t.366.159q.16.165.163.354t-.162.353l-2.62 2.62q-.13.13-.267.183q-.136.053-.298.053M6.616 19q-.691 0-1.153-.462T5 17.384v-1.923q0-.213.143-.356t.357-.144t.357.144t.143.356v1.923q0 .231.192.424t.423.192h10.77q.23 0 .423-.192t.192-.424v-1.923q0-.213.143-.356t.357-.144t.357.144t.143.356v1.923q0 .691-.462 1.153T17.384 19z"/></svg>
+                </button>
+
+            </div>
+        </div> -->
+        
+    </div>
+
+    <form class="chat-input" id = "chatInp" enctype="multipart/form-data">
+        <input type="file" name="fileInp" id="fileInp" multiple>
+        <label for="fileInp" class="btn btn-secondary" id="fileBtn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m21.438 11.662l-9.19 9.19a6.003 6.003 0 1 1-8.49-8.49l9.19-9.19a4.002 4.002 0 0 1 5.66 5.66l-9.2 9.19a2.001 2.001 0 1 1-2.83-2.83l8.49-8.48"/></svg>
+        </label>
+        <textarea name="mesgInp" id="mesgInp" class="input" rows="1"></textarea>
+        <button class="btn-primary" id="sendBtn" type="submit">
+            <svg xmlns="http://www.w3.org/2000/svg" style="background-color: transparent" width="24" height="24" viewBox="0 0 24 24"><path fill="currentcolor" d="M4.4 19.425q-.5.2-.95-.088T3 18.5V14l8-2l-8-2V5.5q0-.55.45-.837t.95-.088l15.4 6.5q.625.275.625.925t-.625.925z"/></svg>
+        </button>
+    </form>
+
+</body>
+<script src="clientRenderer.js"></script>
+</html>
