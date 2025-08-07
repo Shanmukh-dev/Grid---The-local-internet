@@ -74,16 +74,18 @@ textarea{
 }
 
 .btn-download{
-    background-color: var(--accent);
+    background-color: hsl(from var(--accent) h s calc(l + 10));
     padding: 10px;
     width: 24px;
     height: 24px;
+    margin-left: auto;
+    color: var(--bg);
     transition: all 0.2s ease-out;
     border-radius: 100%;
 }
 
 .btn-download:hover{
-    background-color: hsl(from var(--accent) h s calc(l + 10));
+    background-color: hsl(from var(--accent) h s calc(l - 10));
 }
 
 .btn-disabled{

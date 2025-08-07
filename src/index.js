@@ -38,7 +38,7 @@ function startServer(event) {
     let server = http.createServer(expressApp);
     const host = getLocalIP();
     const port = 9999
-    io = new Server(server);
+    io = new Server(server,{maxHttpBufferSize: 1e9});
 
     event.sender.send("on-start-server", host, port)
 
@@ -49,24 +49,31 @@ function startServer(event) {
 
 
     io.on("connection", socket => {
-        console.log(socket.id);
         let name;
         socket.on("new-user-joined", (uname) => {
+            console.log("New user:", socket.id, "name:", uname);
             clients[socket.id] = uname
             name = uname;
             socket.emit("prev-messages", chat)
             socket.broadcast.emit("message", {id: socket.id, type: "info", message: `${uname} joined the chat`})
         })
         socket.on("send", message => {
-            console.log(message);
-            let data = {id: socket.id, type: message.type, sender: clients[socket.id], message: message.message}
+            let data;
+            if(message.type === "file"){
+                console.log(message);
+                data = {id: socket.id, type: message.type, sender: clients[socket.id], content: message.content, fname: message.fname, mimeType: message.mimeType}
+            }else{
+                data = {id: socket.id, type: message.type, sender: clients[socket.id], message: message.message}
+            }
             chat.push(data)
 
             socket.broadcast.emit("message", data)
         })
 
         socket.on("disconnect", (reason) => {
-            delete clients[socket.id]
+            // delete clients[socket.id]
+            console.log(`${name} left the chat`);
+            
             socket.broadcast.emit("message", {id: socket.id, type: "info", message: `${name} left the chat`})
 
 
@@ -90,8 +97,8 @@ function stopServer(event){
         io.close();
         console.log("Server stopped")
         event.sender.send("on-stop-server")
+        chat.splice(0, chat.length)
     }
-    chat.splice(0, chat.lengths)
 }
 
 const openClient = () => {
