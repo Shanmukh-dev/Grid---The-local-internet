@@ -5,8 +5,10 @@ const serverStat = document.getElementById("serverStat")
 
 let isClientOpen = false;
 
-socketServer.onStartServer((host, port)=>{
-    serverStat.innerText = `Server running on host: ${host}:${port}`
+
+
+socketServer.onStartServer((host)=>{
+    serverStat.innerText = `Server running on host: ${host}`
     stopBtn.setAttribute("class", "btn-primary")
     startBtn.setAttribute("class", "btn-disabled")
     stopBtn.disabled = false;

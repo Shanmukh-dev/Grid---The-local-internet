@@ -16,20 +16,40 @@ let clients = {};
 let chat = [];
 
 function getLocalIP(){
-    let nets = os.networkInterfaces();
-    for(key of Object.keys(nets)){
-        let interface = nets[key];
-        for(i of interface){
+    
+    return os.hostname()
+    
+}
+function getRandomInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
 
-            if(i.family === "IPv4" && i.address !== "127.0.0.1"){
-                console.log(i.address);
-                
-                return i.address
-    
-            }
-        }
+function cipher(input){
+  let str = input;
+  let length = str.length;
+  let sqrt = Math.ceil(Math.sqrt(length));
+  let cipher = ""
+  let arr = [];
+  let key = getRandomInt(1, 20)
+  
+  if(length < sqrt*sqrt){
+    let diff = sqrt*sqrt - length;
+    for(let i = 0; i<diff; i++){
+      str += "#"
     }
-    
+  }
+  
+  for(let pos = 0; pos < str.length; pos++){
+    arr.push(str[pos])
+  }
+
+
+
+  for(let r = 0; r < arr.length; r++){
+    arr[r] = String.fromCharCode(arr[r].charCodeAt(0) ^ key);
+  }
+  cipher = arr.join("") + String.fromCharCode(key)
+  return btoa(cipher).replace(/=/g, "")
 }
 
 
@@ -40,8 +60,9 @@ function startServer(event) {
     const port = 9999
     io = new Server(server,{maxHttpBufferSize: 1e9});
 
-    event.sender.send("on-start-server", host, port)
 
+    event.sender.send("on-start-server", cipher(`${host}:${port}`))
+    
     server.listen(port, host)
 
 

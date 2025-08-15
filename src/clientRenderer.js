@@ -6,9 +6,14 @@ const chat = document.getElementById("chatBox")
 const hostInp = document.getElementById("hostInp");
 const uname = document.getElementById("uname");
 const joinBtn = document.getElementById("joinBtn");
+const joinForm = document.getElementById("joinForm");
+const selectedFiles = document.getElementById("selectedFiles"); 
 
 let socket;
-let recievedfiles = []
+let recievedfiles = [];
+let attachments = [];
+
+selectedFiles.style.height = "0px";
 
 function append(msgObj) {
     let div = document.createElement("div");
@@ -57,9 +62,26 @@ function append(msgObj) {
 
     chat.append(div);
 }
-joinBtn.addEventListener("click", () => {
+
+function decipher(string){
+  string = atob(string)
+  let length = string.length;
+  let sqrt = Math.ceil(Math.sqrt(length));
+  let arr = string.split("");
+  let key = (arr.pop()).charCodeAt(0);
+  
+
+  for (let i = 0; i < arr.length; i++) {
+    arr[i] = String.fromCharCode(arr[i].charCodeAt(0) ^ key);
+    
+  }
+  return (arr.join("")).replace(/\#/g, "")
+}
+
+joinForm.addEventListener("submit", (e) => {
+    e.preventDefault();
     if (hostInp.value && uname.value) {
-        socket = io("http://" + hostInp.value)
+        socket = io("ws://" + decipher(hostInp.value))
         socket.emit("new-user-joined", uname.value)
 
         joinBtn.setAttribute("class", "btn-disabled")
@@ -104,20 +126,44 @@ function download(fileIndex) {
 
 }
 
+function deletefile(fileDiv, findex){
+    fileDiv.remove()
+    attachments.splice(findex, 1)
+    if (attachments.length === 0){
+        selectedFiles.style.height = "0px";
+    }
+}
 
+function attachFile(fname, index){
+    let fileDiv =  `<div class="file">
+                <button onclick="deletefile(this.parentNode, ${index})">x</button>
+                <span class="fname">${fname}</span>
+            </div>`;
+    selectedFiles.innerHTML += fileDiv;
+    selectedFiles.style.height = "150px";
+}
+
+fileInp.addEventListener("change", () => {
+    const files = fileInp.files;
+
+    for(const file  of files){
+        attachments.push(file);
+        attachFile(file.name, attachments.indexOf(file));
+    }
+})
 
 chatInp.addEventListener("submit", (e) => {
     e.preventDefault();
     let data = new FormData(e.target);
-    let files = fileInp.files;
-    console.log(files);
+    // let files = fileInp.files;
+    console.log(attachments);
 
     let msg = data.get("mesgInp");
     let message = { type: "msg", message: msg, id: socket.id };
 
-    if (msg || files) {
+    if (msg || attachments) {
 
-        for (const file of files) {
+        for (const file of attachments) {
             console.log(file);
             data = {
                 type: "file",
@@ -152,12 +198,14 @@ chatInp.addEventListener("submit", (e) => {
             
             
             reader.readAsArrayBuffer(file);
-        };
+        }
         if(msg){
 
             append(message)
             socket.emit("send", message);
         }
+        attachments.splice(0, attachments.length);
+        selectedFiles.innerHTML = "";
         chatInp.reset()
 
     }

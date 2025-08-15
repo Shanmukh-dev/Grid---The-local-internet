@@ -5,7 +5,7 @@ const {contextBridge, ipcRenderer} = require("electron")
 contextBridge.exposeInMainWorld("socketServer", {
     startServer: () => {ipcRenderer.send('start-server')},
     stopServer: () => {ipcRenderer.send('stop-server')},
-    onStartServer: (cb) => ipcRenderer.on("on-start-server", (_, host, port)=>cb(host, port)),
+    onStartServer: (cb) => ipcRenderer.on("on-start-server", (_, host)=>cb(host)),
     onStopServer: (cb) => ipcRenderer.on("on-stop-server", ()=>cb()),
     openClient: () => ipcRenderer.send("open-client")
 })
