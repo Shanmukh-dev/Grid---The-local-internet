@@ -13,37 +13,56 @@
         <input type="text" id="hostInp" class="input" placeholder="Enter host">
         <button class="btn-primary" id="joinBtn" type="submit">Join</button>
     </form>
-    <div class="chat-box" id="chatBox">
-        <!-- Do not delete the comment below 👇 -->
-
-        
-        
-    </div>
-
-    <div class="inputFields">
-
-        <div class="selected-files" id="selectedFiles">
-            <!-- <div class="file">
-                <button onclick="deletefile(this.parentNode)">x</button>
-                <span class="fname">Test.txt</span>
+    
+    <div class="main-container">
+        <div class="sidebar" id="screenSharingSidebar">
+            <h3>Screen Sharing</h3>
+            <div class="screen-sharing-list" id="screenSharingList">
+                <!-- Screen sharing users will be listed here -->
             </div>
-            <div class="file">
-                <button onclick="deletefile(this.parentNode)">x</button>
-                <span class="fname">TSSv.txt</span>
-            </div> -->
-        </div>
-        <form class="chat-input" id = "chatInp" enctype="multipart/form-data">
-            <input type="file" name="fileInp" id="fileInp" multiple>
-            <label for="fileInp" class="btn btn-secondary" id="fileBtn">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m21.438 11.662l-9.19 9.19a6.003 6.003 0 1 1-8.49-8.49l9.19-9.19a4.002 4.002 0 0 1 5.66 5.66l-9.2 9.19a2.001 2.001 0 1 1-2.83-2.83l8.49-8.48"/></svg>
-            </label>
-            <textarea name="mesgInp" id="mesgInp" class="input" rows="1"></textarea>
-            <button class="btn-primary" id="sendBtn" type="submit">
-                <svg xmlns="http://www.w3.org/2000/svg" style="background-color: transparent" width="24" height="24" viewBox="0 0 24 24"><path fill="currentcolor" d="M4.4 19.425q-.5.2-.95-.088T3 18.5V14l8-2l-8-2V5.5q0-.55.45-.837t.95-.088l15.4 6.5q.625.275.625.925t-.625.925z"/></svg>
+            <button class="btn-secondary" id="startScreenShareBtn" style="margin-top: 10px;">
+                Start Screen Share
             </button>
-        </form>
+            <button class="btn-secondary" id="stopScreenShareBtn" style="margin-top: 5px; display: none;">
+                Stop Screen Share
+            </button>
+        </div>
+        
+        <div class="chat-container">
+            <div class="chat-box" id="chatBox">
+                <!-- Do not delete the comment below 👇 -->
+
+                
+                
+            </div>
+
+            <div class="inputFields">
+
+                <div class="selected-files" id="selectedFiles">
+                    <!-- <div class="file">
+                        <button onclick="deletefile(this.parentNode)">x</button>
+                        <span class="fname">Test.txt</span>
+                    </div>
+                    <div class="file">
+                        <button onclick="deletefile(this.parentNode)">x</button>
+                        <span class="fname">TSSv.txt</span>
+                    </div> -->
+                </div>
+                <form class="chat-input" id = "chatInp" enctype="multipart/form-data">
+                    <input type="file" name="fileInp" id="fileInp" multiple>
+                    <label for="fileInp" class="btn btn-secondary" id="fileBtn">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="m21.438 11.662l-9.19 9.19a6.003 6.003 0 1 1-8.49-8.49l9.19-9.19a4.002 4.002 0 0 1 5.66 5.66l-9.2 9.19a2.001 2.001 0 1 1-2.83-2.83l8.49-8.48"/></svg>
+                    </label>
+                    <textarea name="mesgInp" id="mesgInp" class="input" rows="1"></textarea>
+                    <button class="btn-primary" id="sendBtn" type="submit">
+                        <svg xmlns="http://www.w3.org/2000/svg" style="background-color: transparent" width="24" height="24" viewBox="0 0 24 24"><path fill="currentcolor" d="M4.4 19.425q-.5.2-.95-.088T3 18.5V14l8-2l-8-2V5.5q0-.55.45-.837t.95-.088l15.4 6.5q.625.275.625.925t-.625.925z"/></svg>
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
 
 </body>
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 <script src="clientRenderer.js"></script>
 </html>

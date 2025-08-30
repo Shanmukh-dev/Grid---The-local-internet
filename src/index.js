@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require("electron");
+const { app, BrowserWindow, ipcMain, desktopCapturer } = require("electron");
 const path = require("path");
 const http = require("http");
 const os = require("os")
@@ -14,6 +14,8 @@ let socket;
 
 let clients = {};
 let chat = [];
+let screenSharingUsers = new Set();
+let screenCaptureIntervals = {};
 
 function getLocalIP(){
     
@@ -58,12 +60,21 @@ function startServer(event) {
     let server = http.createServer(expressApp);
     const host = getLocalIP();
     const port = 9999
-    io = new Server(server,{maxHttpBufferSize: 1e9});
+    io = new Server(server, {
+        maxHttpBufferSize: 1e9,
+        cors: {
+            origin: "*",
+            methods: ["GET", "POST"]
+        },
+        allowEIO3: true
+    });
 
 
     event.sender.send("on-start-server", cipher(`${host}:${port}`))
     
-    server.listen(port, host)
+    server.listen(port, '0.0.0.0', () => {
+        console.log(`Server listening on ${host}:${port}`);
+    })
 
 
     console.log("starting server");
@@ -76,6 +87,8 @@ function startServer(event) {
             clients[socket.id] = uname
             name = uname;
             socket.emit("prev-messages", chat)
+            // Send current screen sharing users to new client
+            socket.emit("screen-sharing-users", Array.from(screenSharingUsers))
             socket.broadcast.emit("message", {id: socket.id, type: "info", message: `${uname} joined the chat`})
         })
         socket.on("send", message => {
@@ -91,14 +104,54 @@ function startServer(event) {
             socket.broadcast.emit("message", data)
         })
 
-        socket.on("disconnect", (reason) => {
-            // delete clients[socket.id]
-            console.log(`${name} left the chat`);
+        socket.on("screen-frame", (data) => {
+            // Broadcast screen frame to other clients
+            socket.broadcast.emit("screen-frame", {
+                userId: socket.id,
+                frame: data.frame,
+                timestamp: data.timestamp
+            });
+        });
+
+        // Screen sharing events
+        socket.on("start-screen-share", () => {
+            console.log(`${clients[socket.id]} started screen sharing`);
+            screenSharingUsers.add(socket.id);
+            io.emit("user-started-sharing", {userId: socket.id, userName: clients[socket.id]});
+            // Screen capture will be handled in the renderer process
+        });
+
+        socket.on("stop-screen-share", () => {
+            console.log(`${clients[socket.id]} stopped screen sharing`);
+            screenSharingUsers.delete(socket.id);
+            io.emit("user-stopped-sharing", socket.id);
             
-            socket.broadcast.emit("message", {id: socket.id, type: "info", message: `${name} left the chat`})
+            // Stop screen capture
+            if (screenCaptureIntervals[socket.id]) {
+                clearInterval(screenCaptureIntervals[socket.id]);
+                delete screenCaptureIntervals[socket.id];
+            }
+        });
 
-
-        })
+        socket.on("disconnect", (reason) => {
+            // Clean up screen sharing if user was sharing
+            if (screenSharingUsers.has(socket.id)) {
+                screenSharingUsers.delete(socket.id);
+                io.emit("user-stopped-sharing", socket.id);
+                
+                if (screenCaptureIntervals[socket.id]) {
+                    clearInterval(screenCaptureIntervals[socket.id]);
+                    delete screenCaptureIntervals[socket.id];
+                }
+            }
+            
+            const userName = name || clients[socket.id] || 'Unknown user';
+            console.log(`${userName} left the chat`);
+            socket.broadcast.emit("message", {id: socket.id, type: "info", message: `${userName} left the chat`});
+            
+            // Clean up client data
+            delete clients[socket.id];
+        });
 
     })
 
@@ -129,16 +182,16 @@ const openClient = () => {
         menu: null,
         autoHideMenuBar: true,
         webPreferences: {
-            nodeIntegration: true,
-            contextIsolation: false
+            preload: path.join(__dirname, "preload.js"),
+            contextIsolation: true,
+            nodeIntegration: false,
+            enableRemoteModule: false,
+            webSecurity: false, // Allow screen capture
+            allowRunningInsecureContent: true
         },
-        icon: path.join(__dirname, "assets/logo.ico")
-
     })
-    clinetWindow.loadFile(path.join(__dirname, "client.html"))
-    
+    clinetWindow.loadFile(path.join(__dirname, "client.html"));
 }
-
 const createWindow = () => {
     win = new BrowserWindow({
         icon: "./assets/logo/png",
@@ -147,7 +200,9 @@ const createWindow = () => {
         menu: null,
         autoHideMenuBar: true,
         webPreferences: {
-            preload: path.join(__dirname, "preload.js")
+            preload: path.join(__dirname, "preload.js"),
+            contextIsolation: true,
+            nodeIntegration: false
         }
     });
     // win.setAppliccationMenu(null)
@@ -157,6 +212,41 @@ const createWindow = () => {
 
 
 }
+
+// Screen capture functionality
+let currentScreenCapture = null;
+
+ipcMain.handle('start-screen-capture', async () => {
+    try {
+        const sources = await desktopCapturer.getSources({ types: ['screen'] });
+        if (sources.length === 0) {
+            throw new Error('No screen sources available');
+        }
+        
+        const screenSource = sources[0];
+        currentScreenCapture = {
+            sourceId: screenSource.id,
+            name: screenSource.name
+        };
+        
+        return {
+            success: true,
+            sourceId: screenSource.id,
+            name: screenSource.name
+        };
+    } catch (error) {
+        console.error('Screen capture error:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+});
+
+ipcMain.handle('stop-screen-capture', () => {
+    currentScreenCapture = null;
+    return { success: true };
+});
 
 app.whenReady().then(() => {
     ipcMain.on("start-server", (event) => {

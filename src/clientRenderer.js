@@ -1,5 +1,4 @@
-const { read } = require("original-fs");
-const io = require("socket.io-client");
+// Socket.io is loaded from CDN script tag
 const fileInp = document.getElementById("fileInp")
 const chatInp = document.getElementById("chatInp")
 const chat = document.getElementById("chatBox")
@@ -9,9 +8,16 @@ const joinBtn = document.getElementById("joinBtn");
 const joinForm = document.getElementById("joinForm");
 const selectedFiles = document.getElementById("selectedFiles"); 
 
+const screenSharingSidebar = document.getElementById("screenSharingSidebar");
+const screenSharingList = document.getElementById("screenSharingList");
+const startScreenShareBtn = document.getElementById("startScreenShareBtn");
+const stopScreenShareBtn = document.getElementById("stopScreenShareBtn");
+
 let socket;
 let recievedfiles = [];
 let attachments = [];
+let isScreenSharing = false;
+let clients = {}; // Track connected clients
 
 selectedFiles.style.height = "0px";
 
@@ -78,31 +84,163 @@ function decipher(string){
   return (arr.join("")).replace(/\#/g, "")
 }
 
+// Screen sharing event listeners - attached immediately
+startScreenShareBtn.addEventListener("click", async () => {
+    if (!socket) {
+        alert("Please join the chat first");
+        return;
+    }
+    try {
+        // Use Electron IPC for screen capture
+        const result = await window.electronAPI.startScreenCapture();
+        if (!result.success) {
+            throw new Error(result.error || 'Failed to start screen capture');
+        }
+        
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+                mandatory: {
+                    chromeMediaSource: 'desktop',
+                    chromeMediaSourceId: result.sourceId,
+                    maxWidth: 1280,
+                    maxHeight: 720,
+                    maxFrameRate: 5
+                }
+            }
+        });
+        socket.emit("start-screen-share");
+        isScreenSharing = true;
+        startScreenShareBtn.style.display = "none";
+        stopScreenShareBtn.style.display = "block";
+
+        const video = document.createElement('video');
+        video.srcObject = stream;
+        video.play();
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 720;
+        const ctx = canvas.getContext('2d');
+
+        const captureInterval = setInterval(() => {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const frame = canvas.toDataURL('image/jpeg', 0.7);
+            socket.emit("screen-frame", {
+                frame: frame,
+                timestamp: Date.now()
+            });
+        }, 200); // 5 FPS
+
+        // Store the interval to stop later
+        window.screenCaptureInterval = captureInterval;
+        window.screenStream = stream;
+        
+        // Handle when user stops sharing via browser controls
+        stream.getVideoTracks()[0].addEventListener('ended', () => {
+            console.log('Screen sharing ended by user');
+            if (socket) {
+                socket.emit("stop-screen-share");
+            }
+            isScreenSharing = false;
+            startScreenShareBtn.style.display = "block";
+            stopScreenShareBtn.style.display = "none";
+            
+            if (window.screenCaptureInterval) {
+                clearInterval(window.screenCaptureInterval);
+                window.screenCaptureInterval = null;
+            }
+        });
+    } catch (error) {
+        console.error("Failed to start screen capture:", error);
+        alert("Failed to start screen capture: " + error.message);
+    }
+});
+
+stopScreenShareBtn.addEventListener("click", async () => {
+    if (!socket) return;
+    socket.emit("stop-screen-share");
+    isScreenSharing = false;
+    startScreenShareBtn.style.display = "block";
+    stopScreenShareBtn.style.display = "none";
+
+    // Stop screen capture via IPC
+    await window.electronAPI.stopScreenCapture();
+    
+    // Stop screen capture
+    if (window.screenCaptureInterval) {
+        clearInterval(window.screenCaptureInterval);
+        window.screenCaptureInterval = null;
+    }
+    if (window.screenStream) {
+        window.screenStream.getTracks().forEach(track => track.stop());
+        window.screenStream = null;
+    }
+});
+
 joinForm.addEventListener("submit", (e) => {
     e.preventDefault();
     if (hostInp.value && uname.value) {
-        socket = io("ws://" + decipher(hostInp.value))
-        socket.emit("new-user-joined", uname.value)
+        try {
+            const decodedHost = decipher(hostInp.value);
+            console.log("Decoded host:", decodedHost);
+            socket = io("http://" + decodedHost);
+            socket.emit("new-user-joined", uname.value);
 
-        joinBtn.setAttribute("class", "btn-disabled")
-        joinBtn.disabled = true;
-        socket.on("message", (msg) => {
-            console.log(msg);
+            socket.on("connect", () => {
+                console.log("Socket connected:", socket.id);
+                joinBtn.setAttribute("class", "btn-disabled");
+                joinBtn.disabled = true;
+                hostInp.disabled = true;
+                hostInp.style = "opacity: 50%";
+                uname.disabled = true;
+                uname.style = "opacity: 50%";
+            });
 
-            append(msg)
+            socket.on("connect_error", (error) => {
+                console.error("Socket connection error:", error);
+                alert("Failed to connect to server: " + error.message);
+            });
 
-        })
+            socket.on("disconnect", (reason) => {
+                console.log("Socket disconnected:", reason);
+            });
 
-        socket.on("prev-messages", (messages) => {
-            for (const message of messages) {
-                append(message);
-            }
-        })
+            socket.on("message", (msg) => {
+                console.log(msg);
+                append(msg);
+            });
 
-        hostInp.disabled = true
-        hostInp.style = "opacity: 50%"
-        uname.disabled = true
-        uname.style = "opacity: 50%"
+            socket.on("prev-messages", (messages) => {
+                for (const message of messages) {
+                    append(message);
+                }
+            });
+
+            // Socket event listeners for screen sharing
+            socket.on("screen-sharing-users", (users) => {
+                users.forEach(userId => {
+                    // For initial screen sharing users, we might not have their names yet
+                    addScreenSharingUser(userId, clients[userId] || 'Unknown User');
+                });
+            });
+
+            socket.on("user-started-sharing", (data) => {
+                addScreenSharingUser(data.userId, data.userName);
+            });
+
+            socket.on("user-stopped-sharing", (userId) => {
+                removeScreenSharingUser(userId);
+            });
+
+            socket.on("screen-frame", (data) => {
+                // This will be handled by the viewer window
+                console.log("Received screen frame from:", data.userId);
+            });
+        } catch (error) {
+            console.error("Error during join:", error);
+            alert("Error joining chat: " + error.message);
+        }
     }
 })
 
@@ -210,3 +348,123 @@ chatInp.addEventListener("submit", (e) => {
 
     }
 })
+
+// Screen sharing functionality
+function addScreenSharingUser(userId, userName) {
+    const userElement = document.createElement("div");
+    userElement.className = "screen-sharing-user";
+    userElement.innerHTML = `
+        <div class="user-info">
+            <span class="user-name">${userName}</span>
+            <span class="user-status">● Sharing</span>
+        </div>
+        <button class="btn-view" onclick="openScreenViewer('${userId}', '${userName}')">
+            View Screen
+        </button>
+    `;
+    userElement.dataset.userId = userId;
+    screenSharingList.appendChild(userElement);
+}
+
+function removeScreenSharingUser(userId) {
+    const userElement = document.querySelector(`[data-user-id="${userId}"]`);
+    if (userElement) {
+        userElement.remove();
+    }
+}
+
+function openScreenViewer(userId, userName) {
+    // Open a new window for screen viewing
+    const viewerWindow = window.open('', `screenViewer_${userId}`,
+        'width=1000,height=700,menubar=no,toolbar=no,location=no,status=no');
+
+    // Get the server host from the current socket connection
+    const serverHost = socket.io.engine.transport.ws.url.split('://')[1].split(':')[0];
+
+    viewerWindow.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>${userName}'s Screen</title>
+            <style>
+                body { margin: 0; padding: 20px; background: #1a1a1a; color: white; font-family: Arial, sans-serif; }
+                .controls { margin-bottom: 20px; display: flex; gap: 10px; }
+                .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
+                .btn-primary { background: #007bff; color: white; }
+                .btn-secondary { background: #6c757d; color: white; }
+                .screen-container { background: black; border-radius: 8px; overflow: hidden; display: flex; justify-content: center; align-items: center; height: calc(100vh - 100px); }
+                #screenFrame { max-width: 100%; max-height: 100%; display: block; margin: 0 auto; }
+            </style>
+        </head>
+        <body>
+            <div class="controls">
+                <button class="btn btn-primary" onclick="toggleFullscreen()">Fullscreen</button>
+                <button class="btn btn-secondary" onclick="window.close()">Close</button>
+            </div>
+            <div class="screen-container">
+                <canvas id="screenCanvas"></canvas>
+            </div>
+            <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+            <script>
+                const socket = io("http://${serverHost}:9999");
+                socket.on("connect", () => {
+                    console.log("Viewer socket connected:", socket.id);
+                });
+                socket.on("connect_error", (err) => {
+                    console.error("Viewer socket connection error:", err);
+                });
+                socket.on("disconnect", (reason) => {
+                    console.log("Viewer socket disconnected:", reason);
+                });
+                let isFullscreen = false;
+                const canvas = document.getElementById("screenCanvas");
+                const ctx = canvas.getContext("2d");
+                
+                function resizeCanvas() {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight - 100; // account for controls height
+                }
+                window.addEventListener('resize', resizeCanvas);
+                resizeCanvas();
+                
+                socket.on("screen-frame", (data) => {
+                    if (data.userId === "${userId}") {
+                        console.log("Received frame for user:", data.userId);
+                        if (!data.frame) {
+                            console.warn("Empty frame data received");
+                            return;
+                        }
+                        const img = new Image();
+                        img.onload = () => {
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
+                            const x = (canvas.width - img.width * scale) / 2;
+                            const y = (canvas.height - img.height * scale) / 2;
+                            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                        };
+                        img.onerror = (e) => {
+                            console.error("Image load error:", e);
+                        };
+                        img.src = data.frame;
+                    }
+                });
+                
+                function toggleFullscreen() {
+                    if (!isFullscreen) {
+                        document.documentElement.requestFullscreen().catch(err => {
+                            console.error('Fullscreen error:', err);
+                        });
+                    } else {
+                        document.exitFullscreen();
+                    }
+                    isFullscreen = !isFullscreen;
+                }
+                
+                window.addEventListener('beforeunload', () => {
+                    socket.disconnect();
+                });
+            </script>
+        </body>
+        </html>
+    `);
+}
