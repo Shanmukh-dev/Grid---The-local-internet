@@ -207,6 +207,7 @@ chatInp.addEventListener("submit", (e) => {
         attachments.splice(0, attachments.length);
         selectedFiles.innerHTML = "";
         chatInp.reset()
+        selectedFiles.style.height = "0px"
 
     }
 })
