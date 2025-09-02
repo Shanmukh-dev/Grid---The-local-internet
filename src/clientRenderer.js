@@ -419,13 +419,37 @@ function openScreenViewer(userId, userName) {
                 let isFullscreen = false;
                 const canvas = document.getElementById("screenCanvas");
                 const ctx = canvas.getContext("2d");
+                let currentScale = 1;
+                let offsetX = 0;
+                let offsetY = 0;
+                let imgWidth = 1280;
+                let imgHeight = 720;
                 
                 function resizeCanvas() {
                     canvas.width = window.innerWidth;
                     canvas.height = window.innerHeight - 100; // account for controls height
+                    // Recalculate scale and offset if img is loaded
+                    if (imgWidth && imgHeight) {
+                        currentScale = Math.min(canvas.width / imgWidth, canvas.height / imgHeight);
+                        offsetX = (canvas.width - imgWidth * currentScale) / 2;
+                        offsetY = (canvas.height - imgHeight * currentScale) / 2;
+                    }
                 }
                 window.addEventListener('resize', resizeCanvas);
                 resizeCanvas();
+                
+                // Mouse event listener for tracking
+                canvas.addEventListener('mousemove', (e) => {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    // Adjust for scale and offset to get position on original image
+                    const imgX = (x - offsetX) / currentScale;
+                    const imgY = (y - offsetY) / currentScale;
+                    console.log(`Mouse on image: x=${imgX}, y=${imgY}`);
+                    // You can send this to server if needed
+                    // socket.emit("mouse-move", { userId: "${userId}", x: imgX, y: imgY });
+                });
                 
                 socket.on("screen-frame", (data) => {
                     if (data.userId === "${userId}") {
@@ -436,11 +460,13 @@ function openScreenViewer(userId, userName) {
                         }
                         const img = new Image();
                         img.onload = () => {
+                            imgWidth = img.width;
+                            imgHeight = img.height;
+                            currentScale = Math.min(canvas.width / img.width, canvas.height / img.height);
+                            offsetX = (canvas.width - img.width * currentScale) / 2;
+                            offsetY = (canvas.height - img.height * currentScale) / 2;
                             ctx.clearRect(0, 0, canvas.width, canvas.height);
-                            const scale = Math.min(canvas.width / img.width, canvas.height / img.height);
-                            const x = (canvas.width - img.width * scale) / 2;
-                            const y = (canvas.height - img.height * scale) / 2;
-                            ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                            ctx.drawImage(img, offsetX, offsetY, img.width * currentScale, img.height * currentScale);
                         };
                         img.onerror = (e) => {
                             console.error("Image load error:", e);
