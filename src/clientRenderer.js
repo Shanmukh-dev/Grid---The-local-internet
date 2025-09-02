@@ -374,7 +374,7 @@ function removeScreenSharingUser(userId) {
 }
 
 function openScreenViewer(userId, userName) {
-    // Open a new window for screen viewing
+    // Open a new window for screen viewing and remote control
     const viewerWindow = window.open('', `screenViewer_${userId}`,
         'width=1000,height=700,menubar=no,toolbar=no,location=no,status=no');
 
@@ -392,21 +392,109 @@ function openScreenViewer(userId, userName) {
                 .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
                 .btn-primary { background: #007bff; color: white; }
                 .btn-secondary { background: #6c757d; color: white; }
+                .btn-toggle { background: #28a745; color: white; }
+                .btn-toggle.disabled { background: #6c757d; }
                 .screen-container { background: black; border-radius: 8px; overflow: hidden; display: flex; justify-content: center; align-items: center; height: calc(100vh - 100px); }
-                #screenFrame { max-width: 100%; max-height: 100%; display: block; margin: 0 auto; }
+                #screenCanvas { max-width: 100%; max-height: 100%; display: block; margin: 0 auto; cursor: crosshair; }
             </style>
         </head>
         <body>
             <div class="controls">
                 <button class="btn btn-primary" onclick="toggleFullscreen()">Fullscreen</button>
+                <button class="btn btn-toggle" id="remoteControlToggle">Enable Remote Control</button>
                 <button class="btn btn-secondary" onclick="window.close()">Close</button>
             </div>
             <div class="screen-container">
-                <canvas id="screenCanvas"></canvas>
+                <canvas id="screenCanvas" tabindex="0"></canvas>
             </div>
             <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
             <script>
                 const socket = io("http://${serverHost}:9999");
+                let remoteControlEnabled = false;
+                const canvas = document.getElementById("screenCanvas");
+                const ctx = canvas.getContext("2d");
+                let screenWidth = 0;
+                let screenHeight = 0;
+                let imageScale = 1;
+                let imageOffsetX = 0;
+                let imageOffsetY = 0;
+                let imageWidth = 0;
+                let imageHeight = 0;
+
+                function resizeCanvas() {
+                    canvas.width = window.innerWidth;
+                    canvas.height = window.innerHeight - 100; // account for controls height
+                }
+                window.addEventListener('resize', resizeCanvas);
+                resizeCanvas();
+
+                // Toggle remote control
+                const toggleBtn = document.getElementById("remoteControlToggle");
+                toggleBtn.addEventListener("click", () => {
+                    remoteControlEnabled = !remoteControlEnabled;
+                    toggleBtn.textContent = remoteControlEnabled ? "Disable Remote Control" : "Enable Remote Control";
+                    toggleBtn.classList.toggle("disabled", !remoteControlEnabled);
+                    if (remoteControlEnabled) {
+                        canvas.focus();
+                    }
+                });
+
+                // Scale coordinates from canvas to screen
+                function scaleCoordinates(x, y) {
+                    return {
+                        x: Math.round(x * screenWidth / canvas.width),
+                        y: Math.round(y * screenHeight / canvas.height)
+                    };
+                }
+
+                // Identify as host when connecting
+                socket.emit("identify-as-host");
+
+                // Mouse events
+                canvas.addEventListener("mousemove", (e) => {
+                    if (!remoteControlEnabled) return;
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) / canvas.width;
+                    const y = (e.clientY - rect.top) / canvas.height;
+                    socket.emit("mouse-event", { type: "mouse", x, y, button: e.button, action: "move" });
+                });
+
+                canvas.addEventListener("mousedown", (e) => {
+                    if (!remoteControlEnabled) return;
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) / canvas.width;
+                    const y = (e.clientY - rect.top) / canvas.height;
+                    socket.emit("mouse-event", { type: "mouse", x, y, button: e.button, action: "down" });
+                });
+
+                canvas.addEventListener("mouseup", (e) => {
+                    if (!remoteControlEnabled) return;
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.clientX - rect.left) / canvas.width;
+                    const y = (e.clientY - rect.top) / canvas.height;
+                    socket.emit("mouse-event", { type: "mouse", x, y, button: e.button, action: "up" });
+                });
+
+                // Keyboard events
+                canvas.addEventListener("keydown", (e) => {
+                    if (!remoteControlEnabled) return;
+                    if (e.repeat) return;
+                    socket.emit("remote-key-press", { key: e.key.toUpperCase() });
+                    e.preventDefault();
+                });
+
+                canvas.addEventListener("keyup", (e) => {
+                    if (!remoteControlEnabled) return;
+                    socket.emit("remote-key-release", { key: e.key.toUpperCase() });
+                    e.preventDefault();
+                });
+
+                // Receive screen dimensions from server
+                socket.on("screen-dimensions", (size) => {
+                    screenWidth = size.width;
+                    screenHeight = size.height;
+                });
+
                 socket.on("connect", () => {
                     console.log("Viewer socket connected:", socket.id);
                 });
@@ -416,24 +504,10 @@ function openScreenViewer(userId, userName) {
                 socket.on("disconnect", (reason) => {
                     console.log("Viewer socket disconnected:", reason);
                 });
-                let isFullscreen = false;
-                const canvas = document.getElementById("screenCanvas");
-                const ctx = canvas.getContext("2d");
-                
-                function resizeCanvas() {
-                    canvas.width = window.innerWidth;
-                    canvas.height = window.innerHeight - 100; // account for controls height
-                }
-                window.addEventListener('resize', resizeCanvas);
-                resizeCanvas();
-                
+
                 socket.on("screen-frame", (data) => {
                     if (data.userId === "${userId}") {
-                        console.log("Received frame for user:", data.userId);
-                        if (!data.frame) {
-                            console.warn("Empty frame data received");
-                            return;
-                        }
+                        if (!data.frame) return;
                         const img = new Image();
                         img.onload = () => {
                             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -442,24 +516,20 @@ function openScreenViewer(userId, userName) {
                             const y = (canvas.height - img.height * scale) / 2;
                             ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
                         };
-                        img.onerror = (e) => {
-                            console.error("Image load error:", e);
-                        };
                         img.src = data.frame;
                     }
                 });
-                
+
                 function toggleFullscreen() {
-                    if (!isFullscreen) {
+                    if (!document.fullscreenElement) {
                         document.documentElement.requestFullscreen().catch(err => {
                             console.error('Fullscreen error:', err);
                         });
                     } else {
                         document.exitFullscreen();
                     }
-                    isFullscreen = !isFullscreen;
                 }
-                
+
                 window.addEventListener('beforeunload', () => {
                     socket.disconnect();
                 });
