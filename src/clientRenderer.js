@@ -420,13 +420,13 @@ function openScreenViewer(userId, userName) {
                     // Adjust for scale and offset to get position on original image
                     const imgX = (x - offsetX) / currentScale;
                     const imgY = (y - offsetY) / currentScale;
-                    console.log(`Mouse on image: x=${imgX}, y=${imgY}`);
+                    console.log('Mouse on image: x=${imgX}, y=${imgY}');
                     // You can send this to server if needed
                     // socket.emit("mouse-move", { userId: "${userId}", x: imgX, y: imgY });
                 });
                 
                 socket.on("screen-frame", (data) => {
-                    if (data.userId === userId) {
+                    if (data.userId === "${userId}") {
                         console.log("Received frame for user:", data.userId);
                         if (!data.frame) {
                             console.warn("Empty frame data received");
