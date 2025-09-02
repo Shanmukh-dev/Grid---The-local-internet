@@ -380,37 +380,11 @@ function openScreenViewer(userId, userName) {
 
     // Get the server host from the current socket connection
     const serverHost = socket.io.engine.transport.ws.url.split('://')[1].split(':')[0];
-
-    viewerWindow.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>${userName}'s Screen</title>
-            <style>
-                body { margin: 0; padding: 20px; background: #1a1a1a; color: white; font-family: Arial, sans-serif; }
-                .controls { margin-bottom: 20px; display: flex; gap: 10px; }
-                .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
-                .btn-primary { background: #007bff; color: white; }
-                .btn-secondary { background: #6c757d; color: white; }
-                .screen-container { background: black; border-radius: 8px; overflow: hidden; display: flex; justify-content: center; align-items: center; height: calc(100vh - 100px); }
-                #screenFrame { max-width: 100%; max-height: 100%; display: block; margin: 0 auto; }
-            </style>
-        </head>
-        <body>
-            <div class="controls">
-                <button class="btn btn-primary" onclick="toggleFullscreen()">Fullscreen</button>
-                <button class="btn btn-secondary" onclick="window.close()">Close</button>
-            </div>
-            <div class="screen-container">
-                <canvas id="screenCanvas"></canvas>
-            </div>
-            <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
-            <script>
-                const socket = io("http://${serverHost}:9999");
-                socket.on("connect", () => {
-                    console.log("Viewer socket connected:", socket.id);
-                });
-                socket.on("connect_error", (err) => {
+    const socket = io("http://${serverHost}:9999");
+    socket.on("connect", () => {
+        console.log("Viewer socket connected:", socket.id);
+        });
+    socket.on("connect_error", (err) => {
                     console.error("Viewer socket connection error:", err);
                 });
                 socket.on("disconnect", (reason) => {
@@ -489,8 +463,5 @@ function openScreenViewer(userId, userName) {
                 window.addEventListener('beforeunload', () => {
                     socket.disconnect();
                 });
-            </script>
-        </body>
-        </html>
-    `);
+            
 }
