@@ -380,7 +380,7 @@ function openScreenViewer(userId, userName) {
 
     // Get the server host from the current socket connection
     const serverHost = socket.io.engine.transport.ws.url.split('://')[1].split(':')[0];
-    const socket = io("http://${serverHost}:9999");
+                const socket = io("http://" + serverHost + ":9999");
     socket.on("connect", () => {
         console.log("Viewer socket connected:", socket.id);
         });
@@ -420,13 +420,13 @@ function openScreenViewer(userId, userName) {
                     // Adjust for scale and offset to get position on original image
                     const imgX = (x - offsetX) / currentScale;
                     const imgY = (y - offsetY) / currentScale;
-                    console.log('Mouse on image: x=${imgX}, y=${imgY}');
+                    console.log(`Mouse on image: x=${imgX}, y=${imgY}`);
                     // You can send this to server if needed
                     // socket.emit("mouse-move", { userId: "${userId}", x: imgX, y: imgY });
                 });
                 
                 socket.on("screen-frame", (data) => {
-                    if (data.userId === "${userId}") {
+                    if (data.userId === userId) {
                         console.log("Received frame for user:", data.userId);
                         if (!data.frame) {
                             console.warn("Empty frame data received");
@@ -463,5 +463,5 @@ function openScreenViewer(userId, userName) {
                 window.addEventListener('beforeunload', () => {
                     socket.disconnect();
                 });
-            
+    viewerWindow.document.title = "Viewing: " + userName;
 }
