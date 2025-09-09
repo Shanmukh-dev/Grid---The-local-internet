@@ -33,3 +33,5 @@ stopBtn.addEventListener("click", () => {
 openClient.addEventListener("click", ()=>{
   socketServer.openClient()
 })
+
+
