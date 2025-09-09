@@ -130,7 +130,7 @@ startScreenShareBtn.addEventListener("click", async () => {
                 frame: frame,
                 timestamp: Date.now()
             });
-        }, 200); // 5 FPS
+        }, 33); // 30 FPS
 
         // Store the interval to stop later
         window.screenCaptureInterval = captureInterval;
@@ -180,10 +180,13 @@ stopScreenShareBtn.addEventListener("click", async () => {
 
 joinForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    if (hostInp.value && uname.value) {
+    if (uname.value) {
         try {
-            const decodedHost = decipher(hostInp.value);
-            console.log("Decoded host:", decodedHost);
+            let decodedHost = hostInp.value ? decipher(hostInp.value) : "localhost:9999";
+            if (!decodedHost || decodedHost.trim() === "") {
+                decodedHost = "localhost:9999";
+            }
+            console.log("Connecting to host:", decodedHost);
             socket = io("http://" + decodedHost);
             socket.emit("new-user-joined", uname.value);
 
@@ -310,20 +313,23 @@ chatInp.addEventListener("submit", (e) => {
             let reader = new FileReader();
 
             reader.onload = (e) => {
-                data.content = e.target.result;
-                data.fname = file.name;
+                const arrayBuffer = e.target.result;
+                const uint8Array = new Uint8Array(arrayBuffer);
+
+                // Display file locally with the original ArrayBuffer
                 append({
                     type: "file",
                     id: socket.id,
-                    content: e.target.result,
+                    content: arrayBuffer,
                     fname: file.name,
                     mimeType: file.type
                 })
 
+                // Send file to server with Uint8Array for consistent transmission
                 socket.emit("send", {
                     type: "file",
                     id: socket.id,
-                    content: new Uint8Array(e.target.result),
+                    content: uint8Array,
                     fname: file.name,
                     mimeType: file.type
                 });
@@ -387,22 +393,26 @@ function openScreenViewer(userId, userName) {
         <head>
             <title>${userName}'s Screen</title>
             <style>
-                body { margin: 0; padding: 20px; background: #1a1a1a; color: white; font-family: Arial, sans-serif; }
-                .controls { margin-bottom: 20px; display: flex; gap: 10px; }
-                .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; }
-                .btn-primary { background: #007bff; color: white; }
-                .btn-secondary { background: #6c757d; color: white; }
-                .btn-toggle { background: #28a745; color: white; }
-                .btn-toggle.disabled { background: #6c757d; }
-                .screen-container { background: black; border-radius: 8px; overflow: hidden; display: flex; justify-content: center; align-items: center; height: calc(100vh - 100px); }
-                #screenCanvas { max-width: 100%; max-height: 100%; display: block; margin: 0 auto; cursor: crosshair; }
+                body { margin: 0; padding: 0; background: black; color: white; font-family: Arial, sans-serif; overflow: hidden; }
+                .dropdown { position: absolute; top: 10px; right: 10px; z-index: 1000; }
+                .dropdown-toggle { background: rgba(0,0,0,0.7); color: white; border: 1px solid #555; padding: 8px 12px; border-radius: 4px; cursor: pointer; }
+                .dropdown-menu { display: none; position: absolute; top: 100%; right: 0; background: rgba(0,0,0,0.9); border: 1px solid #555; border-radius: 4px; min-width: 150px; }
+                .dropdown-menu.show { display: block; }
+                .dropdown-item { padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #555; }
+                .dropdown-item:hover { background: rgba(255,255,255,0.1); }
+                .dropdown-item:last-child { border-bottom: none; }
+                .screen-container { position: absolute; top: 0; left: 0; width: 100vw; height: 100vh; background: black; display: flex; justify-content: center; align-items: center; }
+                #screenCanvas { width: 100vw; height: 100vh; display: block; cursor: crosshair; }
             </style>
         </head>
         <body>
-            <div class="controls">
-                <button class="btn btn-primary" onclick="toggleFullscreen()">Fullscreen</button>
-                <button class="btn btn-toggle" id="remoteControlToggle">Enable Remote Control</button>
-                <button class="btn btn-secondary" onclick="window.close()">Close</button>
+            <div class="dropdown">
+                <button class="dropdown-toggle" onclick="toggleDropdown()">Menu</button>
+                <div class="dropdown-menu" id="dropdownMenu">
+                    <div class="dropdown-item" onclick="toggleFullscreen()">Toggle Fullscreen</div>
+                    <div class="dropdown-item" id="remoteControlToggle" onclick="toggleRemoteControl()">Enable Remote Control</div>
+                    <div class="dropdown-item" onclick="window.close()">Close</div>
+                </div>
             </div>
             <div class="screen-container">
                 <canvas id="screenCanvas" tabindex="0"></canvas>
@@ -566,6 +576,8 @@ if (imgAspectRatio > canvasAspectRatio) {
                     }
                 });
 
+                let isRemoteControlEnabled = false;
+
                 function toggleFullscreen() {
                     if (!document.fullscreenElement) {
                         document.documentElement.requestFullscreen().catch(err => {
@@ -575,6 +587,20 @@ if (imgAspectRatio > canvasAspectRatio) {
                         document.exitFullscreen();
                     }
                 }
+
+                function toggleRemoteControl() {
+                    isRemoteControlEnabled = !isRemoteControlEnabled;
+                    const toggleBtn = document.getElementById('remoteControlToggle');
+                    toggleBtn.innerText = isRemoteControlEnabled ? 'Disable Remote Control' : 'Enable Remote Control';
+                    socket.emit('toggle-remote-control', { enabled: isRemoteControlEnabled });
+                }
+
+                function toggleDropdown() {
+                    const menu = document.getElementById('dropdownMenu');
+                    menu.classList.toggle('show');
+                }
+
+
 
                 window.addEventListener('beforeunload', () => {
                     socket.disconnect();
